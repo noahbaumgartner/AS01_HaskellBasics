@@ -1,10 +1,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+
 {-# HLINT ignore "Evaluate" #-}
 {-# HLINT ignore "Use list literal" #-}
 {-# HLINT ignore "Redundant lambda" #-}
@@ -12,10 +14,10 @@
 {-# HLINT ignore "Eta reduce" #-}
 
 module Main (main) where
-import Prelude hiding (Foldable)
-import Test.Hspec ( hspec, describe, it, shouldBe, Spec )
-import Test.QuickCheck ( Testable(property) )
 
+import Test.Hspec (Spec, describe, hspec, it, shouldBe)
+import Test.QuickCheck (Testable (property))
+import Prelude hiding (Foldable)
 
 -------------------------------------------------------------------------------
 -- 1. Definitions
@@ -87,11 +89,14 @@ data Color = Red | Green | Blue deriving (Show, Eq)
 c2 :: Color
 c2 = Blue
 
-
 -- TODO: Write your own enumeration type for weekdays.
 -- Make sure that the values can be printed and compared.
 
+data Weekday = Monday | Tuesday | Wednesday | Thursday | Friday | Saturday | Sunday deriving (Show, Eq)
+
 -- TODO: Define a binding named `bestDay` with your value for Sunday. Give the binding a type signature.
+bestDay :: Weekday
+bestDay = Sunday
 
 -------------------------------------------------------------------------------
 -- 4. Basic syntax
@@ -119,44 +124,43 @@ r2 = f2 1 2
 -- TODO: Define the function sumOfSquares:
 -- It should take two arguments and return the sum of their squares.
 sumOfSquares :: Int -> Int -> Int
-sumOfSquares = error "TODO"
+sumOfSquares a b = a * a + b * b
 
 -- This is a test which is executed by the test framework.
 sumOfSquaresSpec :: Spec
 sumOfSquaresSpec =
-    describe "sumOfSquares" $ do
-        it "sumOfSquares 2 3 == 13" $
-            sumOfSquares 2 3 `shouldBe` 13
-        it "behaves like `f(x,y) = x*x + y*y`" $
-            property $ \(x::Int, y:: Int) ->     -- checked against 100 randomly generated (x, y) pairs
-                sumOfSquares x y == x*x + y*y    -- our test states what property must hold
-
+  describe "sumOfSquares" $ do
+    it "sumOfSquares 2 3 == 13" $
+      sumOfSquares 2 3 `shouldBe` 13
+    it "behaves like `f(x,y) = x*x + y*y`" $
+      property $ \(x :: Int, y :: Int) ->
+        -- checked against 100 randomly generated (x, y) pairs
+        sumOfSquares x y == x * x + y * y -- our test states what property must hold
 
 -- Conditional execution can be written using:
 -- 1. conditional expression:
 f3 :: Int -> Bool -> Int
 f3 a b = if b then a + 1 else a -- Every `if` requires an `else` clause
 
-
 -- 2. Guarded equations:
 f4 :: Int -> Bool -> Int
-f4 a b | b         = a + 1 -- any `Bool` expression can be used after |
-       | otherwise = a     -- otherwise is defined as `True`
+f4 a b
+  | b = a + 1 -- any `Bool` expression can be used after |
+  | otherwise = a -- otherwise is defined as `True`
 
 -- 3. Pattern matching:
 f5 :: Int -> Bool -> Int
 f5 a True = a + 1
 f5 a False = a
 
-
 -- Pattern matching works top-down through the equations until the first matches:
 f6 :: Color -> Bool
 f6 Red = True
-f6 _   = False -- `_` is the catch all pattern
+f6 _ = False -- `_` is the catch all pattern
 
 -- This function will always return False, also if applied to `Red` (because the first equation matches always):
 f7 :: Color -> Bool
-f7 _   = False
+f7 _ = False
 f7 Red = True
 
 -- And this is a partial function. Partial in that it is not defined for all values of its parameter type (also called domain).
@@ -165,62 +169,65 @@ f7 Red = True
 -- Try: `f8 Red`
 f8 :: Color -> Char
 f8 Green = 'g'
-f8 Blue  = 'b'
-
+f8 Blue = 'b'
 
 -- TODO: Define the function nextColor:
 -- Next of red is green, next of green is blue, next of blue is red again.
 nextColor :: Color -> Color
-nextColor = error "TODO"
+nextColor Red = Green
+nextColor Green = Blue
+nextColor Blue = Red
 
 -- This is a test which is executed by the test framework.
 nextColorSpec :: Spec
 nextColorSpec =
-    describe "nextColor" $ do
-        it "nextColor Red == Green" $
-            nextColor Red `shouldBe` Green
-        it "nextColor Green == Blue" $
-            nextColor Green `shouldBe` Blue
-        it "nextColor Blue == Red" $
-            nextColor Blue `shouldBe` Red
+  describe "nextColor" $ do
+    it "nextColor Red == Green" $
+      nextColor Red `shouldBe` Green
+    it "nextColor Green == Blue" $
+      nextColor Green `shouldBe` Blue
+    it "nextColor Blue == Red" $
+      nextColor Blue `shouldBe` Red
 
 -- Local definitions can be used for helper functions or intermediate results and avoid the pollution of the name space.
 -- There are two ways to declare local definitions.
 -- 1. let expressions:
 f9 :: Color -> Int
-f9 c = let a :: Color    -- a and f are local definitions and only visible within the `let` and `in` block:
-           a = Red
+f9 c =
+  let a :: Color -- a and f are local definitions and only visible within the `let` and `in` block:
+      a = Red
 
-           f :: Color -> Int
-           f x | x == a = 0
-           f _          = 12
-       in f c
+      f :: Color -> Int
+      f x | x == a = 0
+      f _ = 12
+   in f c
 
 -- 2. where clauses:
 f10 :: Color -> Int
 f10 c = f c
   where
-    a :: Color    -- a and f are local definitions and only visible within the `where` block and the function clause this where block is attached to:
+    a :: Color -- a and f are local definitions and only visible within the `where` block and the function clause this where block is attached to:
     a = Red
 
     f :: Color -> Int
     f x | x == a = 0
-    f _          = 12
+    f _ = 12
 
 -- TODO: Write the type of the given function `f11`:
---- f11 :: TODO
+--- f11 :: Color -> Int -> Bool
+f11 :: Color -> Int -> Bool
 f11 a c = f10 a > c
-
 
 -------------------------------------------------------------------------------
 -- 5. Algebraic Data Types ADT
 -------------------------------------------------------------------------------
 
 -- Value constructors can have multiple components:
-data Part = Storage Int
-          | Display Int Int
-          | Power Bool
-          deriving (Show, Eq)
+data Part
+  = Storage Int
+  | Display Int Int
+  | Power Bool
+  deriving (Show, Eq)
 
 -- The constructor `Storage` takes an `Int` as argument and constructs a value of type `Part`.
 s1 :: Part
@@ -232,40 +239,39 @@ s1 = Storage 1024
 -- price (Storage 1024)
 -- price (Power True)
 price :: Part -> Int
-price (Storage mb)  = mb  -- Parentheses are required around the patterns
+price (Storage mb) = mb -- Parentheses are required around the patterns
 price (Display l w) = l * w
-price (Power True)  = 100
+price (Power True) = 100
 price (Power False) = 50
 
 -- TODO: Write the type of the given definition `s2`.
--- s2 :: TODO
+-- s2 :: Part -> Bool -> Int
+s2 :: Part -> Bool -> Int
 s2 a b = price a + price (Power b)
-
 
 -- It is easy to define a Pair of `Int` values:
 -- The name of the type is `IPair` the value constructor is named `IP`.
 -- The value constructor could have been named `IPair` as well (and that would be ok),
 -- but it also could lead to confusion between type and value.
-data IPair = IP Int Int deriving Eq
+data IPair = IP Int Int deriving (Eq)
 
 -- An example value
 ip :: IPair
 ip = IP 5 4
 
-
 -- TODO: Define the function pairProduct:
 -- It returns the product of its components.
 pairProduct :: IPair -> Int
-pairProduct = error "TODO"
+pairProduct (IP i1 i2) = i1 * i2
 
 pairProductSpec :: Spec
 pairProductSpec =
-    describe "pairProduct" $ do
-        it "pairProduct (IP 4 5) = 20" $
-            pairProduct (IP 4 5) `shouldBe` 20
-        it "swapping twice returns the original" $
-            property $ \(a::Int) b -> iswap (iswap (IP a b)) == IP a b -- nice property
-
+  describe "pairProduct" $ do
+    it "pairProduct (IP 4 5) = 20" $
+      pairProduct (IP 4 5) `shouldBe` 20
+    it "swapping twice returns the original" $
+      property $
+        \(a :: Int) b -> iswap (iswap (IP a b)) == IP a b -- nice property
 
 -- A function which swaps the values on `IPair` values:
 -- Try: `iswap (IP 1 2)`
@@ -307,17 +313,19 @@ p5 :: Bool
 p5 = fst (True, Red)
 
 p6 :: Color
-p6 = snd (True,Red)
+p6 = snd (True, Red)
 
 -- TODO: What is the type of the given definition `p7`?
--- p7 :: TODO
+-- p7 :: Color
+p7 :: Color
 p7 = snd (True, fst (Red, 'X'))
-
 
 -- Without record syntax, accessor functions for the attributes must be written by hand:
 data Person = Person String String
+
 firstName (Person fn _) = fn
-lastName (Person _ ln)  = ln
+
+lastName (Person _ ln) = ln
 
 -- By using record syntax, the accessor functions are generated automatically.
 data Lecturer = MkLecturer {fstName :: String, sndName :: String}
@@ -327,7 +335,7 @@ name = fstName (MkLecturer "Peter" "Meier")
 
 -- TODO: What is the type of the generated function `sndName`?
 -- You can check your answer with `:t sndName` in the repl.
-
+-- sndName :: Lecturer -> String
 
 -------------------------------------------------------------------------------
 -- 6. Lists
@@ -335,9 +343,9 @@ name = fstName (MkLecturer "Peter" "Meier")
 
 -- Here is a data type for a linked list of elements of type `a`:
 data List a -- `List` is called a type constructor and `a` is a type variable. This is similar to `interface List<A>` in Java.
-   = Nil -- There are two ways to construct a list: An empty list, or ...
-   | Node a (List a) -- a node with payload `a` and the rest of the list (of type `List a`).
-   deriving (Show, Eq)
+  = Nil -- There are two ways to construct a list: An empty list, or ...
+  | Node a (List a) -- a node with payload `a` and the rest of the list (of type `List a`).
+  deriving (Show, Eq)
 
 -- Notice that all elements in a list must be of the same type.
 -- But the type variable `a` can be instantiated by the "user" of the `List` type constructor.
@@ -365,20 +373,20 @@ e2 = firstE Nil -- Crashes!
 -- TODO: Define the function isEmpty:
 -- It returns whether the given list is empty.
 isEmpty :: List a -> Bool
-isEmpty = error "TODO"
+isEmpty Nil = True
+isEmpty (Node _ _) = False
 
 isEmptySpec :: Spec
 isEmptySpec =
-    describe "isEmpty" $ do
-        it "isEmpty Nil = True" $
-            isEmpty Nil `shouldBe` True
-        it "isEmpty (Node 'x' Nil) = False" $
-            isEmpty (Node 'x' Nil) `shouldBe` False
-
+  describe "isEmpty" $ do
+    it "isEmpty Nil = True" $
+      isEmpty Nil `shouldBe` True
+    it "isEmpty (Node 'x' Nil) = False" $
+      isEmpty (Node 'x' Nil) `shouldBe` False
 
 -- Like tuples, lists are often used and have special syntax in haskell.
 l3 :: [Int] -- A list with elements of type Int. Between the brackets is the element type.
-l3 = [1,2,3] -- Literal syntax to create a list with three elements
+l3 = [1, 2, 3] -- Literal syntax to create a list with three elements
 
 -- Here is an example of an empty list. The empty list value `[]` is polymorphic - its type is [a].
 -- Thus it can be used as an empty list of any element type.
@@ -398,37 +406,38 @@ l6 = 1 : 2 : 3 : []
 
 -- There are many predefined functions for lists.
 -- Note: head and tail are partial functions (not defined for empty lists). GHC warns about this.
--- TODO: Inspect the resulting values of l7, l8 and l9:
+-- Inspected: l7 ~> 1, l8 ~> [2,3], l9 ~> [1,2,3,4,5,6]
 l7 :: Int
-l7 = head [1,2,3]
+l7 = head [1, 2, 3]
 
 l8 :: [Int]
-l8 = tail [1,2,3]
+l8 = tail [1, 2, 3]
 
 l9 :: [Int]
-l9 = [1,2,3] ++ [4,5,6]
+l9 = [1, 2, 3] ++ [4, 5, 6]
+
+
 
 -- Lists are often inspected using pattern matching.
 -- As always, when writing a pattern, parentheses are required.
 -- This function returns the first two elements of a list of at least length 2
 -- or the empty list otherwise:
 getFirstTwo :: [a] -> [a]
-getFirstTwo (a1:a2:_) = [a1,a2] -- `a1:a2:[]` on the rhs would also work
-getFirstTwo _         = []
-
+getFirstTwo (a1 : a2 : _) = [a1, a2] -- `a1:a2:[]` on the rhs would also work
+getFirstTwo _ = []
 
 -- TODO: Define the function firstAndThird:
 -- It returns in a pair the first and third element of a list.
 -- Is a total (in contrast to partial) implementation possible?
-firstAndThird :: [a] -> (a,a)
-firstAndThird = error "TODO"
+firstAndThird :: [a] -> (a, a)
+firstAndThird (x : _ : z : _) = (x, z)
+-- A total implementation is not possible: there is no value of type `a` to return for lists shorter than 3.
 
 firstAndThirdSpec :: Spec
 firstAndThirdSpec =
-    describe "firstAndThird" $ do
-        it "firstAndThird [1,2,3,4] = (1,3)" $
-            firstAndThird ([1,2,3,4] :: [Int]) `shouldBe` (1,3)
-
+  describe "firstAndThird" $ do
+    it "firstAndThird [1,2,3,4] = (1,3)" $
+      firstAndThird ([1, 2, 3, 4] :: [Int]) `shouldBe` (1, 3)
 
 -- By the way, Strings are just lists with elements of type Char.
 -- The prelude (standard library) defines:
@@ -437,7 +446,6 @@ firstAndThirdSpec =
 -- Strings also have literal syntax:
 s :: String
 s = "Look how easy it is to write a list of Chars :)" -- Same as ['L', 'o', ...] and thus same as 'L' : 'o' : ...
-
 
 -------------------------------------------------------------------------------
 -- 7. Currying and partial application
@@ -469,11 +477,12 @@ res :: Int
 res = add 1 2 -- actually means ((add 1) 2)
 
 -- TODO: What is the type of `pa1`?
--- pa1 :: TODO
+-- pa1 :: Int -> Bool
+pa1 :: Int -> Bool
 pa1 = f True 1
-  where f :: Bool -> Int -> Int -> Bool
-        f _ _ _ = True
-
+  where
+    f :: Bool -> Int -> Int -> Bool
+    f _ _ _ = True
 
 -------------------------------------------------------------------------------
 -- 8. Higher order functions
@@ -484,16 +493,16 @@ pa1 = f True 1
 -- 1. takes a pair with an `Int` as its first component and an arbitrary second component
 -- 2. takes a function from `Int -> Int`
 -- and applies the function f to the first component of the pair.
-mapFst :: (Int,b) -> (Int -> Int) -> (Int, b)
-mapFst (i,b) f = (f i, b)
+mapFst :: (Int, b) -> (Int -> Int) -> (Int, b)
+mapFst (i, b) f = (f i, b)
 
 -- This can be used as follows:
 h :: (Int, Bool)
 h = mapFst (5, True) inc -- Here we pass `inc` as an argument
 
 -- The function could be typed more general:
-mapFst' :: (a,b) -> (a -> a) -> (a, b)
-mapFst' (i,b) f = (f i, b) -- the implementation stays the same
+mapFst' :: (a, b) -> (a -> a) -> (a, b)
+mapFst' (i, b) f = (f i, b) -- the implementation stays the same
 
 -- There are many higher order functions defined for lists:
 -- map :: (a -> b) -> [a] -> [b] -- transforms every element of the list of a's and returns the list of b's.
@@ -501,26 +510,30 @@ mapFst' (i,b) f = (f i, b) -- the implementation stays the same
 
 -- Applies the function `inc` to every element in the list and collects the results:
 mr :: [Int]
-mr = map inc [1,2,3,4]
+mr = map inc [1, 2, 3, 4]
 
 -- Keeps only the elements for which `even` evaluates to `True`:
 fr :: [Int]
-fr = filter even [1,2,3,4]
+fr = filter even [1, 2, 3, 4]
 
 -- TODO: Define the function evenWhenSquared:
 -- It takes a list of Ints, squares every Int, and keeps only those values which are even.
 -- Define and use a local function `square :: Int -> Int`
 evenWhenSquared :: [Int] -> [Int]
-evenWhenSquared = error "TODO"
+evenWhenSquared xs = filter even (map square xs)
+  where
+    square :: Int -> Int
+    square x = x * x
 
 evenWhenSquaredSpec :: Spec
 evenWhenSquaredSpec =
-    describe "evenWhenSquared" $ do
-        it "evenWhenSquared [1,2,3,4] = [4,16]" $
-            evenWhenSquared ([1,2,3,4] :: [Int]) `shouldBe` [4,16]
+  describe "evenWhenSquared" $ do
+    it "evenWhenSquared [1,2,3,4] = [4,16]" $
+      evenWhenSquared ([1, 2, 3, 4] :: [Int]) `shouldBe` [4, 16]
 
 -- TODO: What is the type of the given definition `ho1`?
--- ho1 :: TODO
+-- ho1 :: [(a, b)] -> [a]
+ho1 :: [(a, b)] -> [a]
 ho1 = map fst
 
 -------------------------------------------------------------------------------
@@ -542,19 +555,19 @@ la2 = \i -> i + 1
 -- Sometimes we do not need the name, but are only interested in the functionality.
 -- This is often the case when working with higher order functions:
 la3 :: [Int]
-la3 = map (\i -> i + 1) [1,2,3]
+la3 = map (\i -> i + 1) [1, 2, 3]
 
 -- TODO: Define the function evenWhenSquared':
 -- It takes a list of Ints, squares every Int, and keeps only those values which are even.
 -- Use a lambda expression to square the values.
 evenWhenSquared' :: [Int] -> [Int]
-evenWhenSquared' = error "TODO"
+evenWhenSquared' xs = filter even (map (\x -> x * x) xs)
 
 evenWhenSquared'Spec :: Spec
 evenWhenSquared'Spec =
-    describe "evenWhenSquared'" $ do
-        it "evenWhenSquared' [1,2,3,4] = [4,16]" $
-            evenWhenSquared' ([1,2,3,4] :: [Int]) `shouldBe` [4,16]
+  describe "evenWhenSquared'" $ do
+    it "evenWhenSquared' [1,2,3,4] = [4,16]" $
+      evenWhenSquared' ([1, 2, 3, 4] :: [Int]) `shouldBe` [4, 16]
 
 -------------------------------------------------------------------------------
 -- 10. Operators and sections
@@ -567,17 +580,16 @@ o1 = 1 + 2
 -- One can define its own operators:
 (!+!) :: Int -> Int -> Int
 a !+! b = abs a + abs b
+
 infixl 6 !+! -- One can even define its associativity and precedence.
 
 -- This can now be used and written infix:
 o2 :: Int
 o2 = (-4) !+! 5
 
-
 -- To place an operator in front of its arguments, it can be wrapped in parentheses:
 o3 :: Int
 o3 = (+) 1 2
-
 
 -- And we have special syntax called "sections" to partially apply an operator and treat it as function:
 o4 :: Int -> Int
@@ -586,7 +598,6 @@ o4 = (+ 1) -- same as (\i -> i + 1)
 -- It also works for the first argument:
 o5 :: Int -> Int
 o5 = (1 -) -- same as (\i -> 1 - i)
-
 
 -- Even functions and value constructors can be written infix if surrounded with backticks:
 mul :: Int -> Int -> Int
@@ -599,14 +610,13 @@ o6 = 3 `mul` 4
 -- It takes a list of Ints, squares every Int, and keeps only those values which are even.
 -- Use a `^` operator section to square the values.
 evenWhenSquared'' :: [Int] -> [Int]
-evenWhenSquared'' = error "TODO"
+evenWhenSquared'' xs = filter even (map (^ (2 :: Int)) xs)
 
 evenWhenSquared''Spec :: Spec
 evenWhenSquared''Spec =
-    describe "evenWhenSquared''" $ do
-        it "evenWhenSquared'' [1,2,3,4] = [4,16]" $
-            evenWhenSquared'' ([1,2,3,4] :: [Int]) `shouldBe` [4,16]
-
+  describe "evenWhenSquared''" $ do
+    it "evenWhenSquared'' [1,2,3,4] = [4,16]" $
+      evenWhenSquared'' ([1, 2, 3, 4] :: [Int]) `shouldBe` [4, 16]
 
 -------------------------------------------------------------------------------
 -- 11. Recursion
@@ -620,14 +630,14 @@ evenWhenSquared''Spec =
 -- ~> 3 * 2 * 1
 -- ~> 6
 prod :: Int -> Int
-prod 1 = 1              -- Base case, here recursion terminates
-prod n = n * prod (n-1) -- Recursive case, here the function is called typically with a smaller part of the input.
+prod 1 = 1 -- Base case, here recursion terminates
+prod n = n * prod (n - 1) -- Recursive case, here the function is called typically with a smaller part of the input.
 
 -- Recursion needs some exercise.
 -- Implementing existing list functions is a good approach:
 size :: [a] -> Int
-size []       = 0 -- Empty list has size 0
-size (_:rest) = 1 + size rest -- We have 1 element plus the size of the rest
+size [] = 0 -- Empty list has size 0
+size (_ : rest) = 1 + size rest -- We have 1 element plus the size of the rest
 
 {-
 Advice on recursion from Graham Hutton, Programming in Haskell:
@@ -662,31 +672,32 @@ Step 5: Generalize and simplify.
 -- TODO: Define the function sumOfSquares:
 -- It takes a list and returns the sum of their squared elements.
 sumOfSquaresRec :: [Int] -> Int
-sumOfSquaresRec = error "TODO"
+sumOfSquaresRec [] = 0
+sumOfSquaresRec (x : xs) = x * x + sumOfSquaresRec xs
 
 sumOfSquaresRecSpec :: Spec
 sumOfSquaresRecSpec =
-    describe "sumOfSquaresRec" $ do
-        it "sumOfSquaresRec [2,3] == 13" $
-            sumOfSquaresRec [2,3] `shouldBe` 13
-        it "sumOfSquaresRec [2,3,4] == 29" $
-            sumOfSquaresRec [2,3,4] `shouldBe` 29
-        it "on a list with two elements, matches sumOfSquares" $
-            property $ \(x::Int, y::Int) -> sumOfSquaresRec [x,y] == sumOfSquares x y
-
+  describe "sumOfSquaresRec" $ do
+    it "sumOfSquaresRec [2,3] == 13" $
+      sumOfSquaresRec [2, 3] `shouldBe` 13
+    it "sumOfSquaresRec [2,3,4] == 29" $
+      sumOfSquaresRec [2, 3, 4] `shouldBe` 29
+    it "on a list with two elements, matches sumOfSquares" $
+      property $
+        \(x :: Int, y :: Int) -> sumOfSquaresRec [x, y] == sumOfSquares x y
 
 -- TODO: Define the function `convertList` which takes a `List a` and converts it to a Haskell `[a]`:
 convertList :: List a -> [a]
-convertList = error "TODO"
+convertList Nil = []
+convertList (Node x rest) = x : convertList rest
 
 convertListSpec :: Spec
 convertListSpec =
-    describe "convertList" $ do
-        it "convertList Nil == []" $
-            convertList Nil `shouldBe` ([] :: [Int])
-        it "convertList (Node 'a' (Node 'b' Nil)) == \"ab\"" $
-            convertList (Node 'a' (Node 'b' Nil))  `shouldBe` "ab" -- Remember that String = [Char]
-
+  describe "convertList" $ do
+    it "convertList Nil == []" $
+      convertList Nil `shouldBe` ([] :: [Int])
+    it "convertList (Node 'a' (Node 'b' Nil)) == \"ab\"" $
+      convertList (Node 'a' (Node 'b' Nil)) `shouldBe` "ab" -- Remember that String = [Char]
 
 {-
                                 ____
